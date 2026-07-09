@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 _TEST_DB = tempfile.mktemp(suffix=".db", prefix="erp_test_")
 os.environ["ERP_DB"] = _TEST_DB
 
-from app.database import init_db
+from app.database import engine, init_db
 from app.main import app  # noqa: E402  import after env var set
 
 
