@@ -16,9 +16,13 @@ from app.main import app  # noqa: E402  import after env var set
 @pytest.fixture(autouse=True)
 def fresh_db():
     """Reset DB before each test."""
+    from sqlmodel import SQLModel
     init_db()
+    # Clear all data from all tables (respect FK order)
+    with engine.begin() as conn:
+        for table in reversed(SQLModel.metadata.sorted_tables):
+            conn.execute(table.delete())
     yield
-    # Tables persist; SQLModel in-memory state is reset by TestClient
 
 
 @pytest.fixture
