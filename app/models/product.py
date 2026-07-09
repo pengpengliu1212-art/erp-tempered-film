@@ -5,7 +5,7 @@ from sqlmodel import Field, SQLModel
 
 class ProductBase(SQLModel):
     name: str = Field(min_length=1, max_length=200, description="Product name")
-    sku: str = Field(min_length=1, max_length=50, unique_index=True, description="Unique SKU")
+    sku: str = Field(min_length=1, max_length=50, unique=True, description="Unique SKU")
     size: str = Field(min_length=1, max_length=50, description="Compatible device, e.g., 'iPhone 15'")
     material: str = Field(min_length=1, max_length=50, description="Material, e.g., '9H tempered glass'")
     price_cents: int = Field(ge=0, description="Price in cents (avoid float)")
