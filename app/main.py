@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .database import init_db
+from .frontend import router as frontend_router, mount_static
 from .routes import orders_router, products_router
 
 
@@ -29,5 +30,7 @@ def health() -> dict:
 
 
 # Routers
+app.include_router(frontend_router)
 app.include_router(products_router)
 app.include_router(orders_router)
+mount_static(app)

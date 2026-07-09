@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>ERP 钢化膜 — 仪表盘</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f1115; color: #e4e6eb; padding: 24px; }
+  h1 { font-size: 22px; margin-bottom: 16px; }
+  h2 { font-size: 16px; margin: 24px 0 12px; color: #4fc3f7; }
+  .row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .card { background: #1d2230; border: 1px solid #2a2f3e; border-radius: 8px; padding: 16px; min-width: 200px; flex: 1; }
+  .card .label { font-size: 11px; text-transform: uppercase; color: #9ba1b0; margin-bottom: 4px; }
+  .card .value { font-size: 24px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; background: #161922; color: #9ba1b0; text-transform: uppercase; font-size: 10px; }
+  td { padding: 8px 12px; border-top: 1px solid #2a2f3e; }
+  tr:hover { background: #1d2230; }
+  form { background: #1d2230; border: 1px solid #2a2f3e; border-radius: 8px; padding: 16px; margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+  label { display: flex; flex-direction: column; font-size: 11px; color: #9ba1b0; text-transform: uppercase; }
+  input { background: #0f1115; border: 1px solid #2a2f3e; color: #e4e6eb; padding: 6px 10px; border-radius: 4px; font-size: 13px; min-width: 100px; }
+  button { background: #4fc3f7; color: #000; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+  button:hover { background: #6dd0ff; }
+  .badge { display: inline-block; padding: 2px 8px; background: #2a2f3e; border-radius: 3px; font-size: 10px; color: #4fc3f7; }
+  .low-stock { color: #f87171; }
+  .ok { color: #4ade80; }
+  .error { color: #f87171; }
+  pre { background: #000; color: #b0b8c8; padding: 8px; border-radius: 4px; font-size: 11px; overflow-x: auto; }
+  .links a { color: #4fc3f7; text-decoration: none; margin-right: 12px; }
+  .links a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<h1>🛒 ERP 钢化膜 — 仪表盘 <span class="badge">v0.1.0</span></h1>
+<div class="links">
+  <a href="/docs">📚 Swagger UI (API 文档)</a>
+  <a href="/redoc">📖 ReDoc (API 文档)</a>
+  <a href="/api/health">💚 /api/health</a>
+  <a href="/api/products">📦 /api/products (JSON)</a>
+  <a href="/api/orders">📋 /api/orders (JSON)</a>
+</div>
+
+<h2>📊 概览</h2>
+<div class="row">
+  <div class="card"><div class="label">商品总数</div><div class="value" id="card-products">–</div></div>
+  <div class="card"><div class="label">订单总数</div><div class="value" id="card-orders">–</div></div>
+  <div class="card"><div class="label">总库存</div><div class="value" id="card-stock">–</div></div>
+  <div class="card"><div class="label">低库存 (≤10)</div><div class="value" id="card-low">–</div></div>
+</div>
+
+<h2>➕ 添加钢化膜 SKU</h2>
+<form id="addForm">
+  <label>名称 <input id="name" placeholder="iPhone 15 钢化膜" required></label>
+  <label>SKU <input id="sku" placeholder="IP15-TG-9H" required></label>
+  <label>尺寸 <input id="size" placeholder="iPhone 15" required></label>
+  <label>材质 <input id="material" placeholder="9H tempered glass" required></label>
+  <label>价格 (分) <input id="price_cents" type="number" min="0" placeholder="2999" required></label>
+  <label>库存 <input id="stock" type="number" min="0" placeholder="100" required></label>
+  <button type="submit">添加</button>
+</form>
+<pre id="addResult"></pre>
+
+<h2>📦 商品列表</h2>
+<table id="productsTable">
+  <thead><tr><th>ID</th><th>名称</th><th>SKU</th><th>尺寸</th><th>材质</th><th>价格 (元)</th><th>库存</th><th>状态</th></tr></thead>
+  <tbody id="productsBody"></tbody>
+</table>
+
+<h2>🛍️ 下单</h2>
+<form id="orderForm">
+  <label>商品 ID <input id="order_pid" type="number" min="1" placeholder="1" required></label>
+  <label>数量 <input id="order_qty" type="number" min="1" placeholder="5" required></label>
+  <button type="submit">下单</button>
+</form>
+<pre id="orderResult"></pre>
+
+<h2>📋 订单历史</h2>
+<table id="ordersTable">
+  <thead><tr><th>ID</th><th>商品 ID</th><th>数量</th><th>总价 (分)</th><th>状态</th><th>创建时间</th></tr></thead>
+  <tbody id="ordersBody"></tbody>
+</table>
+
+<script>
+async function api(path, opts) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  return { status: r.status, body: await r.json().catch(() => null) };
+}
+async function refresh() {
+  const products = (await api("/api/products")).body || [];
+  document.getElementById("card-products").textContent = products.length;
+  document.getElementById("card-stock").textContent = products.reduce((s, p) => s + (p.stock || 0), 0);
+  const low = (await api("/api/products/special/low-stock?threshold=10")).body || [];
+  document.getElementById("card-low").textContent = low.length;
+  const tbody = document.getElementById("productsBody");
+  tbody.innerHTML = products.length === 0
+    ? `<tr><td colspan="8" style="text-align:center; color:#9ba1b0;">还没有商品. 用上面表单添加一个.</td></tr>`
+    : products.map(p => `<tr>
+        <td>${p.id}</td>
+        <td>${p.name}</td>
+        <td><code>${p.sku}</code></td>
+        <td>${p.size}</td>
+        <td>${p.material}</td>
+        <td>${(p.price_cents / 100).toFixed(2)}</td>
+        <td class="${p.stock <= 10 ? 'low-stock' : ''}">${p.stock}</td>
+        <td>${p.stock <= 10 ? '<span class="badge">⚠ LOW</span>' : '<span class="ok">✓ OK</span>'}</td>
+      </tr>`).join("");
+  const orders = (await api("/api/orders")).body || [];
+  document.getElementById("card-orders").textContent = orders.length;
+  const obody = document.getElementById("ordersBody");
+  obody.innerHTML = orders.length === 0
+    ? `<tr><td colspan="6" style="text-align:center; color:#9ba1b0;">还没有订单.</td></tr>`
+    : orders.map(o => `<tr>
+        <td>${o.id}</td>
+        <td>${o.product_id}</td>
+        <td>${o.qty}</td>
+        <td>${(o.total_cents / 100).toFixed(2)}</td>
+        <td><span class="badge">${o.status}</span></td>
+        <td>${o.created_at || "-"}</td>
+      </tr>`).join("");
+}
+document.getElementById("addForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const body = {
+    name: document.getElementById("name").value,
+    sku: document.getElementById("sku").value,
+    size: document.getElementById("size").value,
+    material: document.getElementById("material").value,
+    price_cents: parseInt(document.getElementById("price_cents").value),
+    stock: parseInt(document.getElementById("stock").value),
+  };
+  const r = await api("/api/products", { method: "POST", body: JSON.stringify(body) });
+  document.getElementById("addResult").textContent = `${r.status} ${r.status === 201 ? "OK" : "ERR"}\n${JSON.stringify(r.body, null, 2)}`;
+  if (r.status === 201) { e.target.reset(); refresh(); }
+};
+document.getElementById("orderForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const body = { product_id: parseInt(document.getElementById("order_pid").value), qty: parseInt(document.getElementById("order_qty").value) };
+  const r = await api("/api/orders", { method: "POST", body: JSON.stringify(body) });
+  document.getElementById("orderResult").textContent = `${r.status} ${r.status === 201 ? "OK" : "ERR"}\n${JSON.stringify(r.body, null, 2)}`;
+  if (r.status === 201) refresh();
+};
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

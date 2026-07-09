@@ -9,6 +9,13 @@ def test_health(client: TestClient) -> None:
     assert r.json()["status"] == "ok"
 
 
+def test_frontend_home(client: TestClient) -> None:
+    """Frontend dashboard renders."""
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "ERP 钢化膜" in r.text
+
+
 def test_list_products_empty(client: TestClient) -> None:
     """US-001: List products (empty initially)."""
     r = client.get("/api/products")

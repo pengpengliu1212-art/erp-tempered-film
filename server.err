@@ -1,0 +1,6 @@
+C:\Users\Administrator\AppData\Local\Programs\Python\Python310\lib\site-packages\pydantic\_internal\_fields.py:172: UserWarning: Field name "id" in "OrderRead" shadows an attribute in parent "Order"
+  warnings.warn(
+INFO:     Started server process [1468]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
