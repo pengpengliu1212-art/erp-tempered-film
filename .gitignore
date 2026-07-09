@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pbf
+*.so
+*.egg-info/
+.pytest_cache/
+.coverage
+.coverage.*
+
+# Runtime / data
+*.db
+*.sqlite
+*.sqlite3
+erp.db
+*.pid
+*.log
+
+# Test artifacts
+__pycache__/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Python venv
+.venv/
+venv/
